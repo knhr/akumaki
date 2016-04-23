@@ -1,5 +1,4 @@
-﻿using akumaki.Core;
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Windows;
 
@@ -10,13 +9,10 @@ namespace akumaki.UI
     /// </summary>
     public partial class NotifyIconWrapper : Component
     {
-        #region Constructors
-
         public NotifyIconWrapper()
         {
             InitializeComponent();
 
-            toolStripMenuItem_Debug.Click += ToolStripMenuItem_Debug_Click;
             toolStripMenuItem_Exit.Click += ToolStripMenuItem_Exit_Click;
         }
 
@@ -27,20 +23,14 @@ namespace akumaki.UI
             InitializeComponent();
         }
 
-        #endregion Constructors
-
-        #region Internal Methods
-
-        private void ToolStripMenuItem_Debug_Click(object sender, EventArgs e)
-        {
-            WindowLocationStore.Test();
-        }
-
+        /// <summary>
+        /// Event handler for Exit menu click event
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void ToolStripMenuItem_Exit_Click(object sender, EventArgs e)
         {
             Application.Current.Shutdown();
         }
-
-        #endregion Internal Methods
     }
 }

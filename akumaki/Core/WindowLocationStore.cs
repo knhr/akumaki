@@ -1,36 +1,41 @@
-﻿using System;
+﻿using Microsoft.WindowsAPICodePack.ApplicationServices;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace akumaki.Core
 {
-    public class WindowLocationStore
+    /// <summary>
+    /// Saves and restores windows's location.
+    /// 
+    /// In some cases using DisplayPort to connect Monitors,
+    /// windows' location are changed unintentionally when monitor turns off/on.
+    /// 
+    /// To avoid above problem,
+    /// saves windows's location when monitor turns off,
+    /// and restores windows's location when monitor turns on.
+    /// </summary>
+    public class WindowLocationStore : IDisposable
     {
+        #region Win32APIs for windows' location management. (Win32APIs are required since WPF doesn't provide such APIs.)
+
         public delegate bool EnumWindowsDelegate(IntPtr hWnd, IntPtr lparam);
 
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         public extern static bool EnumWindows(EnumWindowsDelegate lpEnumFunc, IntPtr lparam);
 
-        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
-
-        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        private static extern int GetWindowTextLength(IntPtr hWnd);
-
-        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
-
         [DllImport("user32.Dll")]
         static extern int IsWindowVisible(IntPtr hWnd);
 
-        //        typedef struct _RECT 
-        //                { 
-        //                    LONG left; 
-        //                    LONG top; 
-        //                    LONG right; 
-        //                    LONG bottom; 
-        //                } RECT, *PRECT; 
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern int GetWindowText(IntPtr hWnd,
+            StringBuilder lpString, int nMaxCount);
+
         [StructLayout(LayoutKind.Sequential, Pack = 4)]
         private struct RECT
         {
@@ -40,44 +45,144 @@ namespace akumaki.Core
             public int bottom;
         }
 
-        //        BOOL GetWindowRect(
-        //            HWND hWnd,
-        //            LPRECT lpRect
-        //            );        
         [DllImport("User32.Dll")]
-        static extern int GetWindowRect(
-            IntPtr hWnd,
-            out RECT rect
-            );
+        static extern int GetWindowRect(IntPtr hWnd, out RECT rect);
 
-        //        HWND GetDesktopWindow(VOID);        
-        [DllImport("User32.Dll")]
-        static extern IntPtr GetDesktopWindow();
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern int MoveWindow(IntPtr hwnd, int x, int y, int nWidth, int nHeight, int bRepaint);
 
-        public static void Test()
+        #endregion Win32APIs for windows' location management. (Win32APIs are required since WPF doesn't provide such APIs.)
+
+        #region Singleton (in order to dispose static resources)
+
+        /// <summary>
+        /// a WindowLocationStore instance.
+        /// Uses singleton pattern in order to dispose static resources.
+        /// </summary>
+        protected static WindowLocationStore Instance
         {
+            get;
+            private set;
+        }
+
+        /// <summary>
+        /// Creates single instance
+        /// </summary>
+        static WindowLocationStore()
+        {
+            Instance = new WindowLocationStore();
+        }
+
+        #endregion Singleton (in order to dispose static resources)
+
+        /// <summary>
+        /// Initializes this class
+        /// </summary>
+        public static void Initialize()
+        {
+            ResigterEventHandlers();
+        }
+
+        /// <summary>
+        /// Disposes resources
+        /// </summary>
+        public void Dispose()
+        {
+            UnregisterEventHandlers();
+        }
+
+        /// <summary>
+        /// Registers event handlers
+        /// </summary>
+        private static void ResigterEventHandlers()
+        {
+            PowerManager.IsMonitorOnChanged += PowerManager_IsMonitorOnChanged;
+        }
+
+        /// <summary>
+        /// Unregisters event handlers
+        /// </summary>
+        private static void UnregisterEventHandlers()
+        {
+            PowerManager.IsMonitorOnChanged -= PowerManager_IsMonitorOnChanged;
+        }
+
+        /// <summary>
+        /// IsMonitorOnChanged event handler
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private static void PowerManager_IsMonitorOnChanged(object sender, System.EventArgs e)
+        {
+            if (PowerManager.IsMonitorOn)
+            {
+                Task.Run(() =>
+                {
+                    // Windows' location cannot be moved immediately after monitor turn on.
+                    // It needs to wait for a few second.
+                    //
+                    // FIXME It depends on hard-ware settings that how long needs to wait for.
+                    // Taking other ways (i.e. not using IsMonitorOnChanged event) is better,
+                    // however, I couldn't find other good solutions.
+                    //
+                    // TODO add setting window to change the wait time
+                    Thread.Sleep(4000);
+                    RestoreWindowLocation();
+                });
+                return;
+            }
+
+            SaveWindowLocation();
+        }
+
+        #region Save and restore windows' location
+
+        /// <summary>
+        /// Dictionary to save pairs (window's handle, window's location)
+        /// </summary>
+        private static Dictionary<IntPtr, RECT> windowLocationDictionary = new Dictionary<IntPtr, RECT>();
+
+        /// <summary>
+        /// Saves window location
+        /// </summary>
+        private static void SaveWindowLocation()
+        {
+            windowLocationDictionary.Clear();
+
             EnumWindows((hWnd, lpalam) =>
             {
-                int textLen = GetWindowTextLength(hWnd);
-                if (0 < textLen && IsWindowVisible(hWnd) > 0)
+                if (IsWindowVisible(hWnd) > 0)
                 {
-                    StringBuilder tsb = new StringBuilder(textLen + 1);
-                    GetWindowText(hWnd, tsb, tsb.Capacity);
-
-                    StringBuilder csb = new StringBuilder(256);
-                    GetClassName(hWnd, csb, csb.Capacity);
-
                     RECT rect;
                     GetWindowRect(hWnd, out rect);
+                    windowLocationDictionary.Add(hWnd, rect);
+                    MoveWindow(hWnd, rect.left + 100, rect.top, rect.right - rect.left, rect.bottom - rect.top, 0);
 
-                    Console.WriteLine("Class Name: " + csb.ToString());
-                    Console.WriteLine("Title: " + tsb.ToString());
-                    Console.WriteLine("Rect: " + rect.left + ", " + rect.top + ", " + rect.right + ", " + rect.bottom);
+                    #region debug
+                    StringBuilder tsb = new StringBuilder();
+                    GetWindowText(hWnd, tsb, tsb.Capacity);
+                    Debug.WriteLine("Title: " + tsb.ToString());
+                    Debug.WriteLine("Rect: " + rect.left + ", " + rect.top + ", " + rect.right + ", " + rect.bottom);
+                    #endregion debug
                 }
 
                 return true;
             },
             IntPtr.Zero);
         }
+
+        /// <summary>
+        /// Restores windows' location
+        /// </summary>
+        private static void RestoreWindowLocation()
+        {
+            foreach (var windowLocationKV in windowLocationDictionary)
+            {
+                var windowRect = windowLocationKV.Value;
+                MoveWindow(windowLocationKV.Key, windowRect.left, windowRect.top, windowRect.right - windowRect.left, windowRect.bottom - windowRect.top, 1);
+            }
+        }
+
+        #endregion Save and restore windows' location
     }
 }
