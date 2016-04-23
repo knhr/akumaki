@@ -16,9 +16,17 @@ and restores windows's location when monitor turns on.
 
 ## Usage
 
-Execute akumaki.exe.
+#### How to start the application
+
+Just execute akumaki.exe.
+
+The application stays in your TaskTray.
 
 We recommend that you create a shortcut of akumaki.exe to your StartUp folder.
+
+#### How to quit the application
+
+Right-click the application icon in TaskTray, and click the Exit menu.
 
 ## History
 
