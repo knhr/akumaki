@@ -1,4 +1,5 @@
-﻿using akumaki.UI;
+﻿using akumaki.Core;
+using akumaki.UI;
 using System.Windows;
 
 namespace akumaki
@@ -8,16 +9,10 @@ namespace akumaki
     /// </summary>
     public partial class App : Application
     {
-        #region Fields
-
         /// <summary>
         /// NotifyIcon in the TaskTray
         /// </summary>
         private NotifyIconWrapper notifyIcon;
-
-        #endregion Fields
-
-        #region Internal Methods
 
         /// <summary>
         /// Raises the Startup event
@@ -28,6 +23,7 @@ namespace akumaki
             base.OnStartup(e);
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
             notifyIcon = new NotifyIconWrapper();
+            WindowLocationStore.Initialize();
         }
 
         /// <summary>
@@ -39,7 +35,5 @@ namespace akumaki
             base.OnExit(e);
             notifyIcon.Dispose();
         }
-
-        #endregion Internal Methods
     }
 }
