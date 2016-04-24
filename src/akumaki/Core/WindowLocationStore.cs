@@ -156,7 +156,6 @@ namespace akumaki.Core
                     RECT rect;
                     GetWindowRect(hWnd, out rect);
                     windowLocationDictionary.Add(hWnd, rect);
-                    MoveWindow(hWnd, rect.left + 100, rect.top, rect.right - rect.left, rect.bottom - rect.top, 0);
 
                     #region debug
                     StringBuilder tsb = new StringBuilder();
@@ -181,6 +180,9 @@ namespace akumaki.Core
                 var windowRect = windowLocationKV.Value;
                 MoveWindow(windowLocationKV.Key, windowRect.left, windowRect.top, windowRect.right - windowRect.left, windowRect.bottom - windowRect.top, 1);
             }
+
+            // release the window handles
+            windowLocationDictionary.Clear();
         }
 
         #endregion Save and restore windows' location
