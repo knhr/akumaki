@@ -30,5 +30,8 @@ Right-click the application icon in TaskTray, and click the Exit menu.
 
 ## History
 
+#### V1.1 / 2016-04-25
+* Minor bug fix
+
 #### v1.0 / 2016-04-23
 * Pre-release
