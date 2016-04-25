@@ -1,4 +1,5 @@
-﻿using Microsoft.WindowsAPICodePack.ApplicationServices;
+﻿using akumaki.Properties;
+using Microsoft.WindowsAPICodePack.ApplicationServices;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -126,7 +127,7 @@ namespace akumaki.Core
                     // however, I couldn't find other good solutions.
                     //
                     // TODO add setting window to change the wait time
-                    Thread.Sleep(4000);
+                    Thread.Sleep(Settings.Default.WaitTimeAfterMonitorOn);
                     RestoreWindowLocation();
                 });
                 return;
