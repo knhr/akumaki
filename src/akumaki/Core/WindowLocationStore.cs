@@ -119,7 +119,7 @@ namespace akumaki.Core
             {
                 Task.Run(() =>
                 {
-                    // Windows' location cannot be moved immediately after monitor turn on.
+                    // Windows' location cannot be moved immediately after monitor turns on.
                     // It needs to wait for a few second.
                     //
                     // FIXME It depends on hard-ware settings that how long needs to wait for.
